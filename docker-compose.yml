@@ -1,0 +1,46 @@
+services:
+  # Border Router (Option A "propre")
+  otbr:
+    image: openthread/otbr:latest
+    container_name: otbr
+    privileged: true
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      OTBR_LOG_LEVEL: 4
+
+  gps:
+    build: .
+    container_name: th-gps
+    privileged: true
+    network_mode: host
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - ./scripts:/work/scripts
+    command: ["bash","-lc","/work/scripts/start_sensor.sh gps"]
+    restart: unless-stopped
+
+  temperature:
+    build: .
+    container_name: th-temp
+    privileged: true
+    network_mode: host
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - ./scripts:/work/scripts
+    command: ["bash","-lc","/work/scripts/start_sensor.sh temperature"]
+    restart: unless-stopped
+
+  battery:
+    build: .
+    container_name: th-battery
+    privileged: true
+    network_mode: host
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - ./scripts:/work/scripts
+    command: ["bash","-lc","/work/scripts/start_sensor.sh battery"]
+    restart: unless-stopped
