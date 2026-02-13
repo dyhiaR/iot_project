@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+ <link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <title>Page de connexion</title>
+
+    <style>
+        .layout{
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* 2/3 - 1/3 */
+  gap: 5px;
+  height: 100% ;
+  min-height: 830px;
+  margin: 2%;
+}
+
+.map{
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+#map { width: 100%; height: 100%; }
+
+.panel{
+  background: rgba(17, 24, 49, 0.9);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.kpi{
+  display:flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  background: rgba(255,255,255,.04);
+}
+
+.kpi-label{ color: var(--muted); font-weight: 700; }
+.kpi-value{ font-size: 18px; font-weight: 900; }
+
+.actions-col{
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+/* Responsive: sur petit écran, la map passe au-dessus */
+@media (max-width: 900px){
+
+  
+}
+      :root {
+        --bg: #2545af;
+        --card: #1d3897;
+        --text: #e9ecf1;
+        --muted: #a9b2c7;
+        --border: rgba(255,255,255,.12);
+        --accent: #6ea8fe;
+      }
+
+      * { box-sizing: border-box; }
+
+  body{
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: radial-gradient(1200px 600px at 10% 0%, #1a2455 0%, var(--bg) 55%);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 0;
+}
+
+      .container { width: 100%; max-width: 520px; }
+      .title { margin: 0 0 8px 0; font-size: 40px; letter-spacing: .2px; }
+      .subtitle { margin: 0 0 20px 0; color: var(--muted); line-height: 1.4; }
+
+      .card {
+        background: rgba(17, 24, 49, 0.9);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 18px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.35);
+        backdrop-filter: blur(6px);
+      }
+
+      form { display: grid; gap: 14px; }
+      label { display: grid; gap: 7px; font-weight: 600; }
+
+      input {
+        width: 100%;
+        padding: 12px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,.06);
+        color: var(--text);
+        outline: none;
+        font-size: 14px;
+      }
+
+      input::placeholder { color: rgba(233,236,241,.5); }
+      input:focus {
+        border-color: rgba(110,168,254,.55);
+        box-shadow: 0 0 0 4px rgba(110,168,254,.12);
+      }
+
+      .actions { display: flex; gap: 10px; margin-top: 6px; }
+
+      button {
+        appearance: none;
+        border: 1px solid transparent;
+        background: var(--accent);
+        color: #0b1020;
+        padding: 12px 14px;
+        border-radius: 10px;
+        font-weight: 800;
+        cursor: pointer;
+        flex: 1;
+      }
+
+      button.secondary {
+        background: transparent;
+        color: var(--text);
+        border-color: var(--border);
+        font-weight: 700;
+      }
+
+      .hidden { display: none; }
+
+      .msg {
+        margin-top: 14px;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,.12);
+        display: none;
+      }
+      #trackingView { height: 100%; }
+     .layout { height: 100%; }
+    #map { height: 100%; width: 100%; }
+    #loginView {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+    </style>
+  </head>
+
+  <body>
+    <main >
+        <div class="container"> 
+
+      <!-- Vue 1 : Connexion / Start -->
+      <section id="loginView" >
+        <h1 class="title">Page de connexion</h1>
+        <p class="subtitle">Saisissez vos informations pour démarrer une session de tracking.</p>
+
+        <section class="card" aria-label="Formulaire de connexion">
+          <form id="startForm">
+            <label for="nom">
+              Nom
+              <input id="nom" name="nom" type="text" placeholder="Nom" required />
+            </label>
+
+            <label for="prenom">
+              Prénom
+              <input id="prenom" name="prenom" type="text" placeholder="Prénom" required />
+            </label>
+
+            <label for="email">
+              Adresse mail
+              <input id="email" name="email" type="email" placeholder="prenom.nom@exemple.com" required />
+            </label>
+
+            <div class="actions">
+              <button id="startBtn" type="submit">Commencer le tracking</button>
+            </div>
+
+            <div id="loginMsg" class="msg"></div>
+          </form>
+        </section>
+      </section>
+</div>
+      <!-- Vue 2 : Tracking (vide pour l'instant) -->
+<section id="trackingView" class="hidden" style="width: 100%; height: 100%;">
+  <div class="layout">
+    <div id="map" class="map"></div>
+
+    <aside class="panel">
+      <h2 style="margin:0 0 12px 0;">Tracking</h2>
+
+      <div class="kpi">
+        <div class="kpi-label">Batterie</div>
+        <div class="kpi-value" id="batteryValue">-- %</div>
+      </div>
+
+      <div class="kpi">
+        <div class="kpi-label">Température</div>
+        <div class="kpi-value" id="tempValue">-- °C</div>
+      </div>
+
+      <div class="actions-col">
+        <button id="stopBtn" class="secondary" type="button">Arrêter le tracking</button>
+        <button id="historyBtn" type="button">Voir l’historique</button>
+      </div>
+
+      <div class="hint" id="gpsInfo" style="margin-top:12px;">
+        Dernière position: --
+      </div>
+    </aside>
+  </div>
+</section>
+
+    </main>
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+<script>
+  // =========================
+  // Leaflet map
+  // =========================
+  let map = null;
+  let marker = null;
+  let path = null;
+
+  function initMap() {
+    if (map) return;
+
+    map = L.map("map").setView([48.8566, 2.3522], 15); // position par défaut
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors",
+    }).addTo(map);
+
+    marker = L.marker([48.8566, 2.3522]).addTo(map);
+    path = L.polyline([], { color: "#6ea8fe", weight: 4 }).addTo(map);
+    requestAnimationFrame(() => {
+  if (map) map.invalidateSize();
+  // parfois une 2e fois aide si la machine est lente / docker / etc.
+  setTimeout(() => map && map.invalidateSize(), 200);
+});
+  }
+
+  function updatePosition(lat, lon, ts) {
+    initMap();
+
+    marker.setLatLng([lat, lon]);
+    path.addLatLng([lat, lon]);
+    map.panTo([lat, lon], { animate: true, duration: 0.25 });
+
+    const gpsInfo = document.getElementById("gpsInfo");
+    if (gpsInfo) {
+      gpsInfo.textContent =
+        `Dernière position: ${lat.toFixed(6)}, ${lon.toFixed(6)} (${ts || "ts?"})`;
+    }
+  }
+
+  // =========================
+  // UI + API
+  // =========================
+  const API_BASE = "http://localhost:8000";
+
+  const loginView = document.getElementById("loginView");
+  const trackingView = document.getElementById("trackingView");
+
+  const form = document.getElementById("startForm");
+  const startBtn = document.getElementById("startBtn");
+  const stopBtn = document.getElementById("stopBtn");
+
+  const loginMsg = document.getElementById("loginMsg");
+  const trackingMsg = document.getElementById("trackingMsg");
+
+  function showMsg(el, type, text) {
+    if (!el) return;
+    el.style.display = "block";
+    el.textContent = text;
+    el.style.background =
+      type === "ok" ? "rgba(40, 167, 69, .15)" : "rgba(220, 53, 69, .15)";
+  }
+
+  function switchToTracking(sessionId, userId) {
+    loginView.classList.add("hidden");
+    trackingView.classList.remove("hidden");
+
+    const subtitle = document.getElementById("trackingSubtitle");
+    if (subtitle) {
+      subtitle.textContent = `Session en cours (session_id=${sessionId}, user_id=${userId}).`;
+    }
+
+    // Important: Leaflet a besoin que le div soit visible
+    initMap();
+    setTimeout(() => {
+      if (map) map.invalidateSize();
+    }, 150);
+  }
+
+  // =========================
+  // MQTT over WebSocket
+  // =========================
+  const MQTT_WS_URL = "ws://localhost:9001";
+  let mqttClient = null;
+
+  function startMqttForSession(sessionId) {
+    // si déjà connecté, on ferme
+    stopMqtt();
+
+    mqttClient = mqtt.connect(MQTT_WS_URL);
+
+    mqttClient.on("connect", () => {
+      const topic = `/tracking/${sessionId}/gps`;
+      console.log("MQTT WS connected, subscribing to", topic);
+
+      mqttClient.subscribe(topic, (err) => {
+        if (err) console.error("subscribe error", err);
+      });
+    });
+
+    mqttClient.on("message", (topic, message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        // on met à jour la carte
+        if (typeof data.lat === "number" && typeof data.lon === "number") {
+          updatePosition(data.lat, data.lon, data.ts);
+        }
+      } catch (e) {
+        console.error("bad message", e);
+      }
+    });
+
+    mqttClient.on("error", (err) => {
+      console.error("MQTT error", err);
+    });
+  }
+
+  function stopMqtt() {
+    if (mqttClient) {
+      mqttClient.end(true);
+      mqttClient = null;
+    }
+  }
+
+  // =========================
+  // Start / Stop tracking
+  // =========================
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const payload = {
+      nom: document.getElementById("nom").value.trim(),
+      prenom: document.getElementById("prenom").value.trim(),
+      email: document.getElementById("email").value.trim(),
+    };
+
+    startBtn.disabled = true;
+    showMsg(loginMsg, "ok", "Création de session en cours...");
+
+    try {
+      const res = await fetch(`${API_BASE}/sessions/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`HTTP ${res.status} - ${txt}`);
+      }
+
+      const data = await res.json();
+
+      localStorage.setItem("session_id", data.session_id);
+      localStorage.setItem("user_id", data.user_id);
+
+      // 1) passer à la vue tracking
+      switchToTracking(data.session_id, data.user_id);
+
+      // 2) démarrer l'écoute MQTT
+      startMqttForSession(data.session_id);
+
+      showMsg(loginMsg, "ok", `Session démarrée ✅ (session_id=${data.session_id})`);
+    } catch (err) {
+      showMsg(loginMsg, "err", `Erreur ❌ ${err.message}`);
+    } finally {
+      startBtn.disabled = false;
+    }
+  });
+
+  stopBtn.addEventListener("click", async () => {
+    const sessionId = localStorage.getItem("session_id");
+    if (!sessionId) {
+      showMsg(trackingMsg, "err", "Aucune session_id trouvée.");
+      return;
+    }
+
+    stopBtn.disabled = true;
+    showMsg(trackingMsg, "ok", "Arrêt de la session...");
+
+    // on coupe l'affichage temps réel côté front
+    stopMqtt();
+
+    try {
+      const res = await fetch(`${API_BASE}/sessions/${sessionId}/stop`, {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`HTTP ${res.status} - ${txt}`);
+      }
+
+      const data = await res.json();
+      showMsg(trackingMsg, "ok", `Session arrêtée ✅ (end_time=${data.end_time})`);
+    } catch (err) {
+      showMsg(trackingMsg, "err", `Erreur ❌ ${err.message}`);
+    } finally {
+      stopBtn.disabled = false;
+    }
+  });
+</script>
+  </body>
+</html>
