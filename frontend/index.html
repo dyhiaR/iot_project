@@ -128,7 +128,7 @@
       }
 
       button.secondary {
-        background: transparent;
+        background: red;
         color: var(--text);
         border-color: var(--border);
         font-weight: 700;
@@ -152,6 +152,58 @@
   left: 50%;
   transform: translate(-50%, -50%);
 }
+.panel-top{ margin-bottom: 12px; }
+
+.panel-title{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.logout-mini{
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 0;
+  background: linear-gradient(180deg, red 0%, #ff7a18 100%);
+  box-shadow: 0 6px 14px rgba(0,0,0,.25);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.logout-mini:hover{ filter: brightness(1.05); transform: translateY(-1px); }
+.logout-mini:active{ transform: translateY(0px); filter: brightness(0.98); }
+
+.logout-mini-icon{
+  font-size: 14px;
+  line-height: 1;
+  transform: translateX(1px); /* petit ajustement visuel */
+}
+
+/* Tooltip */
+.logout-mini .tooltip{
+  position: absolute;
+  right: 36px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,.75);
+  color: #fff;
+  padding: 6px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  white-space: nowrap;
+  border: 1px solid rgba(255,255,255,.12);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.logout-mini:hover .tooltip{ opacity: 1; }
 
     </style>
   </head>
@@ -197,8 +249,17 @@
     <div id="map" class="map"></div>
 
     <aside class="panel">
-      <h2 style="margin:0 0 12px 0;">Tracking</h2>
 
+<div class="panel-top">
+  <div class="panel-title">
+    <h2 id="trackingSubtitle" style="margin:0;">Tracking</h2>
+
+    <button id="logoutBtn" class="logout-mini" type="button" aria-label="Quitter sans enregistrer">
+      <span class="logout-mini-icon" aria-hidden="true">➡️</span>
+      <span class="tooltip">Quitter sans enregistrer</span>
+    </button>
+  </div>
+</div>
       <div class="kpi">
         <div class="kpi-label">Batterie</div>
         <div class="kpi-value" id="batteryValue">-- %</div>
@@ -214,9 +275,7 @@
         <button id="historyBtn" type="button">Voir l’historique</button>
       </div>
 
-      <div class="hint" id="gpsInfo" style="margin-top:12px;">
-        Dernière position: --
-      </div>
+       <div id="sessionsBox" style="margin-top:12px;"></div>
     </aside>
   </div>
 </section>
@@ -260,10 +319,7 @@
     map.panTo([lat, lon], { animate: true, duration: 0.25 });
 
     const gpsInfo = document.getElementById("gpsInfo");
-    if (gpsInfo) {
-      gpsInfo.textContent =
-        `Dernière position: ${lat.toFixed(6)}, ${lon.toFixed(6)} (${ts || "ts?"})`;
-    }
+
   }
 
   // =========================
@@ -294,10 +350,7 @@
     trackingView.classList.remove("hidden");
 
     const subtitle = document.getElementById("trackingSubtitle");
-    if (subtitle) {
-      subtitle.textContent = `Session en cours (session_id=${sessionId}, user_id=${userId}).`;
-    }
-
+  
     // Important: Leaflet a besoin que le div soit visible
     initMap();
     setTimeout(() => {
@@ -318,25 +371,32 @@
     mqttClient = mqtt.connect(MQTT_WS_URL);
 
     mqttClient.on("connect", () => {
-      const topic = `/tracking/${sessionId}/gps`;
-      console.log("MQTT WS connected, subscribing to", topic);
+  mqttClient.subscribe(`/tracking/${sessionId}/gps`);
+  mqttClient.subscribe(`/tracking/${sessionId}/temperature`);
+  mqttClient.subscribe(`/tracking/${sessionId}/battery`);
+});
 
-      mqttClient.subscribe(topic, (err) => {
-        if (err) console.error("subscribe error", err);
-      });
-    });
+mqttClient.on("message", (topic, message) => {
+  try {
+    const data = JSON.parse(message.toString());
 
-    mqttClient.on("message", (topic, message) => {
-      try {
-        const data = JSON.parse(message.toString());
-        // on met à jour la carte
-        if (typeof data.lat === "number" && typeof data.lon === "number") {
-          updatePosition(data.lat, data.lon, data.ts);
-        }
-      } catch (e) {
-        console.error("bad message", e);
-      }
-    });
+    if (topic.endsWith("/gps")) {
+      updatePosition(data.lat, data.lon, data.ts || data.timestamp);
+    }
+
+    if (topic.endsWith("/temperature")) {
+      const val = data.celsius ?? data.temp ?? data.temperature ?? "--";
+      document.getElementById("tempValue").textContent = `${val} °C`;
+    }
+    if (topic.endsWith("/battery")) {
+  const b = Number(data.battery);
+  document.getElementById("batteryValue").textContent =
+    Number.isFinite(b) ? `${b.toFixed(0)} %` : "-- %";
+}
+  } catch (e) {
+    console.error("bad message", e);
+  }
+});
 
     mqttClient.on("error", (err) => {
       console.error("MQTT error", err);
@@ -356,14 +416,14 @@
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const payload = {
-      nom: document.getElementById("nom").value.trim(),
-      prenom: document.getElementById("prenom").value.trim(),
-      email: document.getElementById("email").value.trim(),
-    };
+const payload = {
+  nom: document.getElementById("nom").value.trim().toLowerCase(),
+  prenom: document.getElementById("prenom").value.trim().toLowerCase(),
+  email: document.getElementById("email").value.trim().toLowerCase(),
+};
 
     startBtn.disabled = true;
-    showMsg(loginMsg, "ok", "Création de session en cours...");
+    
 
     try {
       const res = await fetch(`${API_BASE}/sessions/start`, {
@@ -373,22 +433,28 @@
       });
 
       if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`HTTP ${res.status} - ${txt}`);
-      }
+  let detail = "";
+  try {
+    const errJson = await res.json();      // FastAPI renvoie {detail: "..."}
+    detail = errJson.detail || JSON.stringify(errJson);
+  } catch (_) {
+    detail = await res.text();
+  }
+  throw new Error(detail || `HTTP ${res.status}`);
+}
 
       const data = await res.json();
 
       localStorage.setItem("session_id", data.session_id);
       localStorage.setItem("user_id", data.user_id);
-
+      localStorage.setItem("mode", "tracking");
       // 1) passer à la vue tracking
       switchToTracking(data.session_id, data.user_id);
 
       // 2) démarrer l'écoute MQTT
       startMqttForSession(data.session_id);
 
-      showMsg(loginMsg, "ok", `Session démarrée ✅ (session_id=${data.session_id})`);
+      
     } catch (err) {
       showMsg(loginMsg, "err", `Erreur ❌ ${err.message}`);
     } finally {
@@ -417,6 +483,8 @@
       if (!res.ok) {
         const txt = await res.text();
         throw new Error(`HTTP ${res.status} - ${txt}`);
+        localStorage.removeItem("session_id");
+localStorage.setItem("mode", "home");
       }
 
       const data = await res.json();
@@ -427,6 +495,140 @@
       stopBtn.disabled = false;
     }
   });
+  const historyBtn = document.getElementById("historyBtn");
+const sessionsBox = document.getElementById("sessionsBox");
+
+function formatDate(dtStr) {
+  if (!dtStr) return "--";
+  const d = new Date(dtStr);
+  return d.toLocaleString();
+}
+
+historyBtn.addEventListener("click", async () => {
+  const userId = localStorage.getItem("user_id");
+  if (!userId) {
+    sessionsBox.textContent = "Aucun user_id trouvé.";
+    return;
+  }
+
+  sessionsBox.textContent = "Chargement des sessions...";
+  try {
+    const res = await fetch(`${API_BASE}/users/${userId}/sessions`);
+    if (!res.ok) throw new Error(`HTTP ${res.status} - ${await res.text()}`);
+
+    const data = await res.json();
+
+    if (!data.sessions || data.sessions.length === 0) {
+      sessionsBox.textContent = "Aucune session trouvée.";
+      return;
+    }
+
+    // affichage simple (liste)
+sessionsBox.innerHTML = data.sessions.map(s => {
+  const start = formatDate(s.start_time);
+  const end = formatDate(s.end_time);
+
+  return `
+    <div style="padding:10px 12px; border:1px solid rgba(255,255,255,.12); border-radius:12px; margin-bottom:8px;">
+      <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+        <div>
+          <b>Session</b> — ${s.status}<br/>
+          <span style="opacity:.85; font-size:13px;">Début: ${start}</span><br/>
+          <span style="opacity:.85; font-size:13px;">Fin: ${end}</span>
+        </div>
+        <button type="button"  data-session-id="${s.id}">Voir</button>
+      </div>
+    </div>
+  `;
+}).join("");
+sessionsBox.querySelectorAll("button[data-session-id]").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    const sessionId = btn.getAttribute("data-session-id");
+    await loadSessionTrack(sessionId);
+  });
+});
+  } catch (e) {
+    sessionsBox.textContent = `Erreur: ${e.message}`;
+  }
+});
+async function loadSessionTrack(sessionId) {
+  // On passe en mode "historique" : on coupe le live
+  stopMqtt();
+
+  // (optionnel) arrêter la session courante si elle tourne encore
+  // -> tu peux le faire plus tard, pour l'instant on coupe juste l'affichage live.
+
+  showMsg(trackingMsg, "ok", `Chargement du parcours de la session ${sessionId}...`);
+
+  const res = await fetch(`${API_BASE}/sessions/${sessionId}/gps`);
+  if (!res.ok) throw new Error(`HTTP ${res.status} - ${await res.text()}`);
+
+  const data = await res.json();
+  const points = data.points || [];
+
+  initMap();
+
+  // reset trace
+  path.setLatLngs([]);
+
+  if (points.length === 0) {
+    showMsg(trackingMsg, "err", "Aucun point GPS pour cette session.");
+    return;
+  }
+
+  // tracer la polyline
+  for (const p of points) {
+    path.addLatLng([p.lat, p.lon]);
+  }
+
+  // placer le marker sur le dernier point
+  const last = points[points.length - 1];
+  marker.setLatLng([last.lat, last.lon]);
+
+  // zoom sur le trajet
+  map.fitBounds(path.getBounds(), { padding: [20, 20] });
+
+  showMsg(trackingMsg, "ok", `Parcours chargé ✅ (${points.length} points)`);
+}
+const logoutBtn = document.getElementById("logoutBtn");
+
+function backToHome() {
+  // UI
+  document.body.classList.remove("tracking-mode");
+  trackingView.classList.add("hidden");
+  loginView.classList.remove("hidden");
+
+  // reset map trace (optionnel)
+  if (path) path.setLatLngs([]);
+
+  // nettoyer stockage local
+  localStorage.removeItem("session_id");
+  localStorage.removeItem("user_id");
+}
+
+logoutBtn.addEventListener("click", async () => {
+  const sessionId = localStorage.getItem("session_id");
+
+  // 1) couper immédiatement le live côté front
+  stopMqtt();
+
+  if (sessionId) {
+    try {
+      // 2) arrêter la session côté backend (arrête l'écoute/polling)
+      await fetch(`${API_BASE}/sessions/${sessionId}/stop`, { method: "POST" });
+
+      // 3) supprimer la session (Quitter sans enregistrer)
+      await fetch(`${API_BASE}/sessions/${sessionId}`, { method: "DELETE" });
+    } catch (e) {
+      console.error("logout flow error:", e);
+      // même si ça échoue, on revient à l'accueil
+    }
+  }
+
+  // 4) retour accueil + nettoyage UI/storage
+  backToHome();
+});
+
 </script>
   </body>
 </html>
