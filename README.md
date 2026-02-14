@@ -1,20 +1,20 @@
 # IoT Tracking Platform (CoAP + Thread/OpenThread + MQTT + Web)
 
----
-
-## Description
-Ce projet met en place une architecture IoT complète pour un cas de **tracking** (GPS + température + batterie).  
-Les capteurs (simulés) exposent des ressources **CoAP** (UDP). Le **backend FastAPI** interroge les capteurs, **valide** et **persiste** les données dans **PostgreSQL**, puis les publie en **MQTT** via **Mosquitto** pour un affichage **temps réel** dans une interface web (Leaflet). L’application permet également de consulter l’**historique** des sessions.
 
 
----
+### Description
+Ce projet met en place une architecture IoT complète pour un cas de tracking (GPS + température + batterie).  
+Les capteurs (simulés) exposent des ressources CoAP (UDP). Le backend FastAPI interroge les capteurs, valide et persiste les données dans PostgreSQL, puis les publie en MQTT via Mosquitto pour un affichage temps réel dans une interface web (Leaflet). L’application permet également de consulter l’historique des sessions.
 
 
 
 
 
 
-## Services (Docker Compose)
+
+
+
+### Services (Docker Compose)
 - **frontend** : page web (Leaflet) + MQTT WebSocket
 - **backend** : FastAPI (API REST + client CoAP + publisher MQTT)
 - **postgres** : stockage (`users`, `sessions`, `gps_points`, etc.)
@@ -22,7 +22,6 @@ Les capteurs (simulés) exposent des ressources **CoAP** (UDP). Le **backend Fas
 - **otbr** : OpenThread Border Router (mode host)
 - **gps / temperature / battery** : capteurs OpenThread / CoAP (mode host)
 
----
 
 
 
@@ -54,14 +53,13 @@ Accès :
 5. Cliquer sur Voir l’historique**
 
 
----
+
 
 ## Points importants du projet
 - **Simulateurs optimisés** : les valeurs ne sont pas totalement aléatoires ; elles évoluent de façon plus réaliste (inertie température, décharge batterie, parcours GPS cohérent).
 - **Validation des données** : des règles (format, champs obligatoires, bornes plausibles) sont appliquées côté backend avant **persistance** et avant **publication MQTT**, afin de garantir des données cohérentes en base et dans l’UI.
 - **Données seedées** : des enregistrements sont insérés pour permettre de tester rapidement les fonctionnalités (login, sessions, historique).
 
----
 
 
 
